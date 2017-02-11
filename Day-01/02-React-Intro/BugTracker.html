@@ -3,6 +3,10 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Bug Tracker</title>
+	<script src="browser.min.js"></script>
+	<script src="jquery-3.1.1.js"></script>
+	<script src="react.js"></script>
+	<script src="react-dom.js"></script>
 	<style>
 		ol{
 			list-style: none;
@@ -30,26 +34,123 @@
 		}
 
 	</style>
+	<script type="text/babel">
+		window.getEvents = function (){
+			return {
+				_subscribers : {},
+				on : function(evtName, listenerFn){
+					this._subscribers[evtName] = this._subscribers[evtName] || [];
+					this._subscribers[evtName].push(listenerFn);
+				},
+
+				trigger : function(evtName){
+					var data = Array.prototype.slice.call(arguments, 1);
+					var subscriptions = this._subscribers[evtName] || [];
+					subscriptions.forEach(subscription => subscription.apply(this, data))
+				}
+			};
+		}
+
+		window.extend = function extend(fn, obj){
+			var bases = Array.prototype.slice.call(arguments,1);
+			bases.forEach(base  => {
+				for(var key in base)
+					fn.prototype[key] = base[key];
+			});
+		}
+
+		function BugsCollection(){
+			var _data  = [];
+			this.add = function(bugName){
+				_data.push(bugName);
+				this.trigger('all')
+			};
+			this.toJSON = function(){
+				return _data.slice(0);
+			}
+		}
+		extend(BugsCollection, getEvents());
+		
+		function Bug(name){
+			var _data = {
+				name : name,
+				isClosed : false
+			};
+			this.set = function(attrName, value){
+				_data[attrName] = value;
+				this.trigger('all', attrName)
+			};
+			this.toJSON = function(){
+				return JSON.parse(JSON.stringify(_data));
+			};
+			this.toggle = function(){
+				this.set('isClosed', !_data.isClosed);
+			}
+		}
+		extend(Bug, getEvents());
+		
+		var BugItem = React.createClass({
+			toggleBug : function(){
+				this.props.bug.toggle();
+				console.log('after toggling', this.props.bug.toJSON());
+			},
+			render : function(){
+				var bugData = this.props.bug.toJSON();
+				return ( bugData.isClosed ? 
+					
+						<li><span className="bugname closed" onClick={this.toggleBug}>{bugData.name}</span></li> 
+				:
+					<li><span className="bugname" onClick={this.toggleBug}>{bugData.name}</		span></li>
+				);
+			}
+		})
+
+		var BugTrackerApp = React.createClass({
+			addNewBug : function(){
+				var newBug = new Bug(this.refs.txtBugName.value)
+				this.props.bugs.add(newBug);
+			},
+			render : function(){
+				var bugList = this.props.bugs.toJSON();
+				var bugItems = bugList.map(function(bug, index){
+					return <BugItem key={index} bug={bug}></BugItem>
+				});
+				return (
+					<div>
+					<h1>Bug Tracker</h1>
+					<hr />
+					<div className="stats">
+						<span className="closed">3</span>
+						<span> / </span>
+						<span>{bugList.length}</span>
+					</div>
+					<div className="edit">
+						<label htmlFor="">New Bug :</label>
+						<input type="text" ref="txtBugName" />
+						<input type="button" value="Save" onClick={this.addNewBug}/>
+						<input type="button" value="Remove Closed" />
+					</div>
+					<div className="list">
+						<ol>
+							{bugItems}
+						</ol>
+					</div>
+					</div>
+				)
+			}
+		});
+
+		var bugsCollection = new BugsCollection();
+		bugsCollection.on('all', renderApp);
+		function renderApp(){
+			ReactDOM.render(<BugTrackerApp bugs={bugsCollection}></BugTrackerApp>,document.getElementById("app-content"));
+		}
+		renderApp();
+	</script>
 </head>
 <body>
-	<h1>Bug Tracker</h1>
-	<hr>
-	<div class="stats">
-		<span class="closed">3</span>
-		<span> / </span>
-		<span>5</span>
-	</div>
-	<div class="edit">
-		<label for="">New Bug :</label>
-		<input type="text" name="" id="">
-		<input type="button" value="Save">
-		<input type="button" value="Remove Closed">
-	</div>
-	<div class="list">
-		<ol>
-			<li><span class="bugname">This is Bug - 1</span></li>
-			<li><span class="bugname closed">This is Bug - 2</span></li>
-		</ol>
+	<div id="app-content">
+		
 	</div>
 
 </body>
