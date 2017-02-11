@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Bug Tracker</title>
+	<style>
+		ol{
+			list-style: none;
+			width: 400px
+		}
+		li{
+			margin-bottom: 10px;
+			border : 1px solid gray;
+			background-color: #e7e7e7;
+			padding: 5px;
+			border-radius: 5px;
+		}
+		.bugname, .stats{
+			font-size: 22pt;
+			
+		}
+		.bugname{
+			cursor : pointer;
+		}
+		.closed{
+			color : red;
+			text-decoration: line-through;
+			font-weight: bold;
+			font-style: italic;
+		}
+
+	</style>
+</head>
+<body>
+	<h1>Bug Tracker</h1>
+	<hr>
+	<div class="stats">
+		<span class="closed">3</span>
+		<span> / </span>
+		<span>5</span>
+	</div>
+	<div class="edit">
+		<label for="">New Bug :</label>
+		<input type="text" name="" id="">
+		<input type="button" value="Save">
+		<input type="button" value="Remove Closed">
+	</div>
+	<div class="list">
+		<ol>
+			<li><span class="bugname">This is Bug - 1</span></li>
+			<li><span class="bugname closed">This is Bug - 2</span></li>
+		</ol>
+	</div>
+
+</body>
+</html>

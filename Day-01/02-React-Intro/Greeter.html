@@ -30,8 +30,21 @@
 
 		calculatorModel.onChange('all', init);
 
+		var MyApp = React.createClass({
+			render : function(){
+				return (
+					<div>
+						<Greeter></Greeter>
+						<hr />
+						<SalaryCalculatorView calculator={calculatorModel}>
+						</SalaryCalculatorView>
+					</div>
+				);
+			}
+		})
+
 		function init(){
-			ReactDOM.render(<SalaryCalculatorView calculator={calculatorModel}></SalaryCalculatorView>, document.getElementById("greeter"));
+			ReactDOM.render(<MyApp></MyApp>, document.getElementById("content"));
 		}
 
 		var Greeter = React.createClass({
@@ -165,7 +178,7 @@
 	</script>
 </head>
 <body>
-	<div id="greeter">
+	<div id="content">
 		
 	</div>	
 </body>
