@@ -35,30 +35,31 @@
 
 	</style>
 	<script type="text/babel">
-		window.getEvents = function (){
-			return {
-				_subscribers : {},
-				on : function(evtName, listenerFn){
-					this._subscribers[evtName] = this._subscribers[evtName] || [];
-					this._subscribers[evtName].push(listenerFn);
-				},
-
-				trigger : function(evtName){
-					var data = Array.prototype.slice.call(arguments, 1);
-					var subscriptions = this._subscribers[evtName] || [];
-					subscriptions.forEach(subscription => subscription.apply(this, data))
-				}
-			};
+		window.Events = function Events(){
+			this._subscribers = {};
+		}
+		Events.prototype.on = function on(evtName, listenerFn){
+			this._subscribers[evtName] = this._subscribers[evtName] || [];
+			this._subscribers[evtName].push(listenerFn);
 		}
 
-		window.extend = function extend(fn, obj){
-			var bases = Array.prototype.slice.call(arguments,1);
-			bases.forEach(base  => {
-				for(var key in base)
-					fn.prototype[key] = base[key];
+		Events.prototype.trigger = function trigger(evtName){
+			var data = Array.prototype.slice.call(arguments, 1);
+			var subscriptions = this._subscribers[evtName] || [];
+			subscriptions.forEach(subscription => subscription.apply(this, data))
+		}
+
+		window.extend = function extend(fn){
+			var baseFns = Array.prototype.slice.call(arguments,1);
+
+			baseFns.forEach(baseFn  => {
+				var baseObj = new baseFn();
+				for(var key in baseObj){
+					fn.prototype[key] = baseObj[key];
+				}
 			});
 		}
-
+		
 		function BugsCollection(){
 			var _data  = [];
 			this.add = function(bugName){
@@ -69,7 +70,7 @@
 				return _data.slice(0);
 			}
 		}
-		extend(BugsCollection, getEvents());
+		extend(BugsCollection, Events);
 		
 		function Bug(name){
 			var _data = {
@@ -87,7 +88,7 @@
 				this.set('isClosed', !_data.isClosed);
 			}
 		}
-		extend(Bug, getEvents());
+		extend(Bug, Events);
 		
 		var BugItem = React.createClass({
 			toggleBug : function(){
@@ -146,6 +147,7 @@
 			ReactDOM.render(<BugTrackerApp bugs={bugsCollection}></BugTrackerApp>,document.getElementById("app-content"));
 		}
 		renderApp();
+		
 	</script>
 </head>
 <body>
