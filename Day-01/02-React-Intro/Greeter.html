@@ -3,6 +3,18 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Greeter</title>
+	<style>
+		.field{
+			margin-bottom: 10px;
+		}
+		label{
+			display: block;
+		}
+		#divResult{
+			color : red;
+			font-size: 26pt;
+		}
+	</style>
 	<script src="browser.min.js"></script>
 	<script src="react.js"></script>
 	<script src="react-dom.js"></script>
@@ -10,17 +22,146 @@
 	<script type="text/babel">
 		$(document).ready(init);
 
+		window.calculatorModel = new SalaryCalculator();
+		calculatorModel.set('basic', 10000);
+		calculatorModel.set('hra', 5000);
+		calculatorModel.set('da', 5000);
+		calculatorModel.set('tax', 5);
+
+		calculatorModel.onChange('all', init);
+
 		function init(){
-			ReactDOM.render(<Greeter></Greeter>, document.getElementById("greeter"));
+			ReactDOM.render(<SalaryCalculatorView calculator={calculatorModel}></SalaryCalculatorView>, document.getElementById("greeter"));
 		}
 
 		var Greeter = React.createClass({
+			getInitialState : function(){
+				return { message : 'A default greet message!'};
+			},
+			onGreetClick : function(){
+				console.log(this.refs.txtName.value);
+				this.setState({message : 'A new greet message'});
+			},
 			render : function(){
 				return (
-					<h1>Greeter</h1>
+					<div>
+						<h1>Greeter</h1>
+						<label>Name :</label>
+						<input type="text" ref="txtName"/>
+						<input type="button" value="Greet" onClick={this.onGreetClick}/>
+						<div>{this.state.message}</div>
+					</div>
 				)
 			}
 		});
+
+		function SalaryCalculator(){
+			var _data = {
+				basic : 0,
+				hra : 0,
+				da : 0,
+				tax : 0,
+				salary : 0
+			};
+
+			this.get = function(attrName){
+				return _data[attrName];
+			};
+
+			this.set = function(attrName, value){
+				if (_data[attrName] === value) return;
+				_data[attrName] = value;
+				//trigger change notification for 'attrName'
+				triggerChange(attrName);
+				triggerChange('all');
+				
+			};
+
+			function triggerChange(attrName){
+				var listenerFns = _eventHanlders[attrName];
+				listenerFns.forEach(function(listenerFn){
+					if (typeof listenerFn === 'function')
+						listenerFn();
+				});
+			}
+
+			this.toJSON = function(){
+				var result = {};
+				for(var key in _data)
+					result[key] = _data[key];
+				return result;
+			}
+
+			var _eventHanlders = {
+				basic : [],
+				hra : [],
+				da : [],
+				tax : [],
+				salary : [],
+				all : []
+			};
+
+			this.onChange = function(attrName, listenerFn){
+				_eventHanlders[attrName].push(listenerFn);
+			}
+		}
+		SalaryCalculator.prototype.calculate = function(){
+			var gross = this.get('basic') + this.get('hra') + this.get('da');
+			var net = gross * ((100-this.get('tax'))/100);
+			this.set('salary', net);
+			
+		}
+
+		var SalaryCalculatorView = React.createClass({
+			updateBasic : function(e){
+				this.props.calculator.set('basic', parseInt(e.target.value,10))
+			},
+			updateHra : function(e){
+				this.props.calculator.set('hra', parseInt(e.target.value,10))
+			},
+			updateDa : function(e){
+				this.props.calculator.set('da', parseInt(e.target.value,10))
+			},
+			updateTax : function(e){
+				this.props.calculator.set('tax', parseInt(e.target.value,10))
+			},
+			triggerCalculate : function(){
+				this.props.calculator.calculate();
+			},
+			render : function(){
+				var model = this.props.calculator.toJSON();
+				return (
+					<div>
+						<hr />
+						<div className="content">
+							<div className="field">
+								<label htmlFor="">Basic :</label>
+								<input type="text" ref="txtBasic" defaultValue={model.basic} onChange={this.updateBasic}/>
+							</div>
+							<div className="field">
+								<label htmlFor="">HRA :</label>
+								<input type="text" ref="txtHra" defaultValue={model.hra} onChange={this.updateHra}/>
+							</div>
+							<div className="field">
+								<label htmlFor="">DA :</label>
+								<input type="text" ref="txtDa" defaultValue={model.da} onChange={this.updateDa}/>
+							</div>
+							<div className="field">
+								<label htmlFor="">Tax :</label>
+								<input type="range" ref="rangeTax" min="0" max="30" defaultValue={model.tax} onChange={this.updateTax}/>
+								<span>{model.tax}</span>
+							</div>
+							<div className="field">
+								<input type="button" value="Calculate" onClick={this.triggerCalculate}/>
+							</div>
+							<div className="field">
+								<div>{model.salary}</div>
+							</div>
+						</div>
+					</div>
+				)
+			}
+		})
 	</script>
 </head>
 <body>
