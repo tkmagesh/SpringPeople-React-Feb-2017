@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Bug Tracker</title>
+	<script src="browser.min.js"></script>
+	<script src="jquery-3.1.1.js"></script>
+	<script src="react.js"></script>
+	<script src="react-dom.js"></script>
+	<style>
+		ol{
+			list-style: none;
+			width: 400px
+		}
+		li{
+			margin-bottom: 10px;
+			border : 1px solid gray;
+			background-color: #e7e7e7;
+			padding: 5px;
+			border-radius: 5px;
+		}
+		.bugname, .stats{
+			font-size: 22pt;
+			
+		}
+		.bugname{
+			cursor : pointer;
+		}
+		.closed{
+			color : red;
+			text-decoration: line-through;
+			font-weight: bold;
+			font-style: italic;
+		}
+
+	</style>
+	<script>
+
+		var Events = function Events(){
+			this._subscribers = {};
+		}
+		Events.prototype.on = function on(evtName, listenerFn){
+			this._subscribers[evtName] = this._subscribers[evtName] || [];
+			this._subscribers[evtName].push(listenerFn);
+		}
+
+		Events.prototype.trigger = function trigger(evtName){
+			var data = Array.prototype.slice.call(arguments, 1);
+			var subscriptions = this._subscribers[evtName] || [];
+			subscriptions.forEach(subscription => subscription.apply(this, data))
+		}
+
+		window.extend = function extend(fn){
+			var baseFns = Array.prototype.slice.call(arguments,1);
+
+			baseFns.forEach(baseFn  => {
+				var baseObj = new baseFn();
+				for(var key in baseObj){
+					fn.prototype[key] = baseObj[key];
+				}
+			});
+		}
+		
+
+		//store
+		//reducer = {state : fn}
+		function Store(reducers){
+			this._reducers = reducers;
+			this._state = {};
+			for(var key in reducers){
+				this._state[key] = reducers[key]({type : 'INIT_STATE'});
+			}
+			
+				
+		}
+		Store.prototype.getState = function(){
+			return this._state;
+		}
+		Store.prototype.dispatch = function(action){
+			for(var key in this._reducers){
+				this._state[key] = this._reducers[key](action, this._state[key])
+			}
+			this.trigger('change');
+		}
+
+		extend(Store, Events);
+
+		function bugsReducer(action, initialState = []){
+			switch(action.type){
+				case 'ADD_NEW_BUG' :
+					var newBugName = action.payload.bugName,
+						newBug = {
+							name : newBugName,
+							id : initialState.reduce((result, bug) => result > bug.id ? result : bug.id, 0) + 1,
+							isClosed : false
+						};
+					return initialState.concat([newBug]);
+				case 'TOGGLE_BUG' :
+					var toggledBug = {
+						id : action.payload.bug.id,
+						isClosed : !action.payload.bug.isClosed,
+						name : action.payload.bug.name
+					};
+					return initialState.map(bug => bug.id === toggledBug.id ?  toggledBug : bug);
+				case  'REMOVE_CLOSED' :
+					console.log('triggering remove clsoed');
+					return initialState.filter(bug => !bug.isClosed);
+				default : 
+					return initialState
+			}
+		}
+		
+	</script>
+	<script type="text/babel">
+		
+
+		
+		
+		var BugItem = React.createClass({
+			toggleBug : function(){
+				
+				this.props.performToggleBug(this.props.bug);
+			},
+			render : function(){
+				var bugData = this.props.bug;
+				return ( bugData.isClosed ? 
+					
+						<li><span className="bugname closed" onClick={this.toggleBug}>{bugData.name}</span></li> 
+				:
+					<li><span className="bugname" onClick={this.toggleBug}>{bugData.name}</		span></li>
+				);
+			}
+		})
+
+		var BugStats = React.createClass({
+			render : function(){
+				var closedCount = this.props.bugs.reduce((result, bug) => bug.isClosed ? ++result : result, 0);
+				return (
+					<div className="stats">
+						<span className="closed">{closedCount}</span>
+						<span> / </span>
+						<span>{this.props.bugs.length}</span>
+					</div>
+				)
+			}
+		})
+
+		var BugTrackerApp = React.createClass({
+			addNewBug : function(){
+				this.props.actions.performAddNew(this.refs.txtBugName.value);
+			},
+			removeClosed : function(){
+				this.props.actions.performRemoveClosed();
+			},
+			render : function(){
+				var bugList = this.props.bugs;
+				var self = this;
+				var bugItems = bugList.map(function(bug, index){
+					return <BugItem key={index} bug={bug} performToggleBug={self.props.actions.performToggleBug}></BugItem>
+				});
+				return (
+					<div>
+					<h1>Bug Tracker</h1>
+					<hr />
+					<BugStats bugs={this.props.bugs}></BugStats>
+					<div className="edit">
+						<label htmlFor="">New Bug :</label>
+						<input type="text" ref="txtBugName" />
+						<input type="button" value="Save" onClick={this.addNewBug}/>
+						<input type="button" value="Remove Closed" onClick={this.removeClosed}/>
+					</div>
+					<div className="list">
+						<ol>
+							{bugItems}
+						</ol>
+					</div>
+					</div>
+				)
+			}
+		});
+	
+		var store = new Store({bugs : bugsReducer});
+		function performAddNewBug(bugName){
+			var addBugAction = { type : 'ADD_NEW_BUG', payload : {bugName : bugName}};
+			store.dispatch(addBugAction);
+		}
+		
+		function performToggleBug(bug){
+			var toggleBugAction = { type : 'TOGGLE_BUG', payload : {bug : bug}};
+			store.dispatch(toggleBugAction);
+		}
+
+		function performRemoveClosed(){
+			var removeClosedBugsAction = { type : 'REMOVE_CLOSED'}
+			store.dispatch(removeClosedBugsAction);
+		}
+
+		var bugActions = {
+			performAddNew : performAddNewBug,
+			performToggleBug : performToggleBug,
+			performRemoveClosed : performRemoveClosed
+		}
+		
+		function renderApp(){
+			ReactDOM.render(<BugTrackerApp bugs={store.getState().bugs} actions={bugActions}></BugTrackerApp>,document.getElementById("app-content"));
+		}
+		store.on('change', renderApp);
+		renderApp();
+		
+	</script>
+</head>
+<body>
+	<div id="app-content">
+		
+	</div>
+
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title></title>
+	<script src="browser.min.js"></script>
+	<script src="jquery-3.1.1.js"></script>
+	<script src="react.js"></script>
+	<script src="react-dom.js"></script>
+	<script>
+
+		var Events = function Events(){
+			this._subscribers = {};
+		}
+		Events.prototype.on = function on(evtName, listenerFn){
+			this._subscribers[evtName] = this._subscribers[evtName] || [];
+			this._subscribers[evtName].push(listenerFn);
+		}
+
+		Events.prototype.trigger = function trigger(evtName){
+			var data = Array.prototype.slice.call(arguments, 1);
+			var subscriptions = this._subscribers[evtName] || [];
+			subscriptions.forEach(subscription => subscription.apply(this, data))
+		}
+
+		window.extend = function extend(fn){
+			var baseFns = Array.prototype.slice.call(arguments,1);
+
+			baseFns.forEach(baseFn  => {
+				var baseObj = new baseFn();
+				for(var key in baseObj){
+					fn.prototype[key] = baseObj[key];
+				}
+			});
+		}
+		
+
+		//store
+		//reducer = {state : fn}
+		function Store(reducers){
+			this._reducers = reducers;
+			this._state = {};
+			for(var key in reducers){
+				this._state[key] = reducers[key]({type : 'INIT_STATE'});
+			}
+			
+				
+		}
+		Store.prototype.getState = function(){
+			return this._state;
+		}
+		Store.prototype.dispatch = function(action){
+			for(var key in this._reducers){
+				this._state[key] = this._reducers[key](action, this._state[key])
+			}
+			this.trigger('change');
+		}
+
+		extend(Store, Events);
+		//reducers
+		function counterReducer(action, currentState = 0){
+			switch(action.type){
+				case 'INCREMENT' :
+					return ++currentState;
+					break;
+				case 'DECREMENT' :
+					return --currentState;
+					break;
+				default :
+					return currentState;
+			}
+		}
+		//actions
+	</script>
+	<script type="text/babel">
+		var Counter = React.createClass({
+			triggerIncrement : function(){
+				this.props.performIncrement();
+			},
+			triggerDecrement : function(){
+				this.props.performDecrement();
+			},
+			render : function(){
+				return (
+					<div>
+						<input type="button" value="INCREMENT" onClick={this.triggerIncrement}/>
+						<div>{this.props.count}</div>
+						<input type="button" value="DECREMENT" onClick={this.triggerDecrement}/>
+					</div>
+				);
+			}
+		});
+		
+		var store = new Store({counter : counterReducer});
+		function performIncrement(){
+			var incAction = { type : 'INCREMENT'};
+			store.dispatch(incAction);
+		}
+		function performDecrement(){
+			var decAction = { type : 'DECREMENT' };
+			store.dispatch(decAction);
+		}
+
+		function render(){
+			ReactDOM.render(<Counter count={store.getState().counter} performIncrement={performIncrement}  performDecrement={performDecrement}></Counter>, document.getElementById("app-content"));
+		}
+
+		store.on('change', render);
+		render();
+
+	</script>
+</head>
+<body>
+	<div id="app-content"></div>
+</body>
+</html>

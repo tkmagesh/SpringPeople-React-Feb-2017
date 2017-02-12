@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Bug Tracker</title>
+	<script src="browser.min.js"></script>
+	<script src="jquery-3.1.1.js"></script>
+	<script src="react.js"></script>
+	<script src="react-dom.js"></script>
+	<style>
+		
+
+	</style>
+	<script type="text/babel">
+		var MyComponent = React.createClass({
+			getInitialState : function(){
+				return { 
+					currentOpacity : 1
+				};
+			},
+			triggerFadeOut : function(){
+				var delta = 0.1;
+				var self = this;
+				var timer = setInterval(function(){
+					
+					self.setState({currentOpacity : self.state.currentOpacity - delta});
+					if (self.state.currentOpacity <= 0)
+						clearInterval(timer);
+				},40)
+			},
+			render : function(){
+				return (
+					<div>
+						<h1 style={{opacity: this.state.currentOpacity}}>This has to fade out</h1>
+						<input type="button" value="Fade Out" onClick={this.triggerFadeOut} />
+					</div>
+				)
+			}
+		});
+
+		ReactDOM.render(<MyComponent></MyComponent>, document.getElementById("app-content"));
+	</script>
+</head>
+<body>
+	<div id="app-content">
+		
+	</div>
+
+</body>
+</html>

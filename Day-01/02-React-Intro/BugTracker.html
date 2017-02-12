@@ -109,6 +109,7 @@
 		var BugTrackerApp = React.createClass({
 			addNewBug : function(){
 				var newBug = new Bug(this.refs.txtBugName.value)
+				new
 				this.props.bugs.add(newBug);
 			},
 			render : function(){
