@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Bug Tracker</title>
+	<script src="browser.min.js"></script>
+	<script src="jquery-3.1.1.js"></script>
+	<script src="react.js"></script>
+	<script src="react-dom.js"></script>
+	<script src="redux.js"></script>
+	<style>
+		ol{
+			list-style: none;
+			width: 400px
+		}
+		li{
+			margin-bottom: 10px;
+			border : 1px solid gray;
+			background-color: #e7e7e7;
+			padding: 5px;
+			border-radius: 5px;
+		}
+		.bugname, .stats{
+			font-size: 22pt;
+			
+		}
+		.bugname{
+			cursor : pointer;
+		}
+		.closed{
+			color : red;
+			text-decoration: line-through;
+			font-weight: bold;
+			font-style: italic;
+		}
+
+	</style>
+	<script>
+
+		
+
+		function bugsReducer(state = [], action){
+			switch(action.type){
+				case 'ADD_NEW_BUG' :
+					var newBugName = action.payload.bugName,
+						newBug = {
+							name : newBugName,
+							id : state.reduce((result, bug) => result > bug.id ? result : bug.id, 0) + 1,
+							isClosed : false
+						};
+					return state.concat([newBug]);
+				case 'TOGGLE_BUG' :
+					var toggledBug = {
+						id : action.payload.bug.id,
+						isClosed : !action.payload.bug.isClosed,
+						name : action.payload.bug.name
+					};
+					return state.map(bug => bug.id === toggledBug.id ?  toggledBug : bug);
+				case  'REMOVE_CLOSED' :
+					console.log('triggering remove clsoed');
+					return state.filter(bug => !bug.isClosed);
+				default : 
+					return state
+			}
+		}
+		
+	</script>
+	<script type="text/babel">
+		
+
+		
+		
+		var BugItem = React.createClass({
+			toggleBug : function(){
+				
+				this.props.performToggleBug(this.props.bug);
+			},
+			render : function(){
+				var bugData = this.props.bug;
+				return ( bugData.isClosed ? 
+					
+						<li><span className="bugname closed" onClick={this.toggleBug}>{bugData.name}</span></li> 
+				:
+					<li><span className="bugname" onClick={this.toggleBug}>{bugData.name}</		span></li>
+				);
+			}
+		})
+
+		var BugStats = React.createClass({
+			render : function(){
+				var bugs = this.props.bugs || [];
+				var closedCount = bugs.reduce((result, bug) => bug.isClosed ? ++result : result, 0);
+				return (
+					<div className="stats">
+						<span className="closed">{closedCount}</span>
+						<span> / </span>
+						<span>{bugs.length}</span>
+					</div>
+				)
+			}
+		})
+
+		var BugTrackerApp = React.createClass({
+			addNewBug : function(){
+				this.props.actions.performAddNew(this.refs.txtBugName.value);
+			},
+			removeClosed : function(){
+				this.props.actions.performRemoveClosed();
+			},
+			render : function(){
+				var bugList = this.props.bugs || [];
+				var self = this;
+				var bugItems = bugList.map(function(bug, index){
+					return <BugItem key={index} bug={bug} performToggleBug={self.props.actions.performToggleBug}></BugItem>
+				});
+				return (
+					<div>
+					<h1>Bug Tracker</h1>
+					<hr />
+					<BugStats bugs={this.props.bugs}></BugStats>
+					<div className="edit">
+						<label htmlFor="">New Bug :</label>
+						<input type="text" ref="txtBugName" />
+						<input type="button" value="Save" onClick={this.addNewBug}/>
+						<input type="button" value="Remove Closed" onClick={this.removeClosed}/>
+					</div>
+					<div className="list">
+						<ol>
+							{bugItems}
+						</ol>
+					</div>
+					</div>
+				)
+			}
+		});
+	
+		var store = Redux.createStore(bugsReducer);
+		
+		function performAddNewBug(bugName){
+			var addBugAction = { type : 'ADD_NEW_BUG', payload : {bugName : bugName}};
+			store.dispatch(addBugAction);
+		}
+		
+		function performToggleBug(bug){
+			var toggleBugAction = { type : 'TOGGLE_BUG', payload : {bug : bug}};
+			store.dispatch(toggleBugAction);
+		}
+
+		function performRemoveClosed(){
+			var removeClosedBugsAction = { type : 'REMOVE_CLOSED'}
+			store.dispatch(removeClosedBugsAction);
+		}
+
+		var bugActions = {
+			performAddNew : performAddNewBug,
+			performToggleBug : performToggleBug,
+			performRemoveClosed : performRemoveClosed
+		}
+		
+		function renderApp(){
+			ReactDOM.render(<BugTrackerApp bugs={store.getState()} actions={bugActions}></BugTrackerApp>,document.getElementById("app-content"));
+		}
+		store.subscribe(renderApp);
+		renderApp();
+		
+	</script>
+</head>
+<body>
+	<div id="app-content">
+		
+	</div>
+
+</body>
+</html>
